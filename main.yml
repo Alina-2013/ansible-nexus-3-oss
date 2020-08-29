@@ -81,8 +81,6 @@
     certbot_certs:
       - domains:
           - "{{ nexus_instance_domain }}"
-    apache_create_vhosts: no
-    apache_remove_default_vhost: true
 
   pre_tasks:
     - name: Update apt cache.
@@ -102,7 +100,7 @@
       when: ansible_os_family == 'Debian'
 
   roles:
-    - geerlingguy.java
-    - geerlingguy.certbot
-    - geerlingguy.apache
-    - ansible-thoteam.nexus3-oss
+    - { role: ansible-role-java }
+    - { role: ansible-role-certbot }
+    - { role: ansible-role-apache, apache_create_vhosts: no, apache_remove_default_vhost: true }
+    - { role: nexus3-oss }
