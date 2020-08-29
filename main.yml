@@ -81,6 +81,8 @@
     certbot_certs:
       - domains:
           - "{{ nexus_instance_domain }}"
+    apache_create_vhosts: no
+    apache_remove_default_vhost: true
 
   pre_tasks:
     - name: Update apt cache.
@@ -103,7 +105,4 @@
     - geerlingguy.java
     - geerlingguy.certbot
     - geerlingguy.apache
-      vars:
-        apache_create_vhosts: no
-        apache_remove_default_vhost: true
     - ansible-thoteam.nexus3-oss
