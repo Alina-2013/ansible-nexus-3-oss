@@ -1,0 +1,106 @@
+---
+- name: Nexus
+  hosts: nexus
+  become: yes
+
+  vars:
+    nexus_timezone: 'CDT'
+    nexus_admin_password: "{{ vault_nexus_admin_password }}"
+    nexus_public_hostname: "{{ nexus_instance_domain }}"
+    httpd_setup_enable: true
+    httpd_copy_ssl_files: false
+    httpd_ssl_cert_file_location: "/etc/letsencrypt/live/{{ nexus_instance_domain }}/fullchain.pem"
+    httpd_ssl_cert_key_location: "/etc/letsencrypt/live/{{ nexus_instance_domain }}/privkey.pem"
+    nexus_ldap_realm: false
+    ldap_connections: []
+    nexus_privileges:
+      - name: all-repos-read
+        description: 'Read & Browse access to all repos'
+        repository: '*'
+        actions:
+          - read
+          - browse
+      - name: company-project-deploy
+        description: 'Deployments to company-project'
+        repository: company-project
+        actions:
+          - add
+          - edit
+    nexus_roles:
+      - id: DevOps # maps to the LDAP group
+        name: devops
+        description: All devops
+        privileges:
+          - nx-search-read
+          - all-repos-read
+          - company-project-deploy
+        roles: []
+    nexus_local_users:
+      - username: jenkins # used as key to update
+        first_name: Jenkins
+        last_name: CI
+        email: "{{ admin_email }}"
+        password: "{{ jenkins_nexus_admin_password }}"
+        roles:
+          - DevOps # role ID here
+    nexus_blobstores:
+      - name: company-artifacts
+        path: /var/nexus/blobs/company-artifacts
+    nexus_scheduled_tasks:
+      - name: compact-blobstore
+        cron: '0 0 22 * * ?'
+        typeId: blobstore.compact
+        taskProperties:
+          blobstoreName: 'company-artifacts'
+    nexus_repos_maven_proxy:
+      - name: central
+        remote_url: 'https://repo1.maven.org/maven2/'
+        layout_policy: permissive
+      - name: jboss
+        remote_url: 'https://repository.jboss.org/nexus/content/groups/public-jboss/'
+      - name: vaadin-addons
+        remote_url: 'https://maven.vaadin.com/vaadin-addons/'
+      - name: jaspersoft
+        remote_url: 'https://jaspersoft.artifactoryonline.com/jaspersoft/jaspersoft-repo/'
+        version_policy: mixed
+    nexus_repos_maven_hosted:
+      - name: company-project
+        version_policy: mixed
+        write_policy: allow
+        blob_store: company-artifacts
+    nexus_repos_maven_group:
+      - name: public
+        member_repos:
+          - central
+          - jboss
+          - vaadin-addons
+          - jaspersoft
+    certbot_admin_email: "{{ admin_email }}"
+    certbot_create_if_missing: true
+    certbot_create_standalone_stop_services: []
+    certbot_certs:
+      - domains:
+          - {{ nexus_instance_domain }}
+
+  pre_tasks:
+    - name: Update apt cache.
+      apt: update_cache=true cache_valid_time=600
+      when: ansible_os_family == 'Debian'
+      changed_when: false
+
+    - name: Install dependencies (RedHat).
+      yum: name={{ item }} state=present
+      when: ansible_os_family == 'RedHat'
+      with_items:
+        - cronie
+        - epel-release
+
+    - name: Install cron (Debian).
+      apt: name=cron state=present
+      when: ansible_os_family == 'Debian'
+
+  roles:
+    - { role: geerlingguy.java }
+    - { role: geerlingguy.certbot }
+    - { role: geerlingguy.apache, apache_create_vhosts: no, apache_remove_default_vhost: true, tags: ["geerlingguy.apache"] }
+    - { role: ansible-thoteam.nexus3-oss, tags: ['ansible-thoteam.nexus3-oss'] }

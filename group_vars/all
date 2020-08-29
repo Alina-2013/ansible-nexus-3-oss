@@ -1,0 +1,7 @@
+---
+nexus_admin_password: "password"
+jenkins_nexus_admin_password: "password"
+nexus_instance_domain: "nexus.example.com"
+admin_email: "admin@example.com"
+
+
