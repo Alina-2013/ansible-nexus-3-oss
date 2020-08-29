@@ -100,7 +100,10 @@
       when: ansible_os_family == 'Debian'
 
   roles:
-    - { role: geerlingguy.java }
-    - { role: geerlingguy.certbot }
-    - { role: geerlingguy.apache, apache_create_vhosts: no, apache_remove_default_vhost: true, tags: ["geerlingguy.apache"] }
-    - { role: ansible-thoteam.nexus3-oss, tags: ['ansible-thoteam.nexus3-oss'] }
+    - geerlingguy.java
+    - geerlingguy.certbot
+    - geerlingguy.apache
+      vars:
+        apache_create_vhosts: no
+        apache_remove_default_vhost: true
+    - ansible-thoteam.nexus3-oss
